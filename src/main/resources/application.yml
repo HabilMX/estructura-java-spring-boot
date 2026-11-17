@@ -1,0 +1,57 @@
+# La configuración de la aplicación, en un solo archivo.
+# Lo que cambia entre ambientes se lee de una variable, con su valor para desarrollo.
+
+spring:
+  application:
+    name: pedidos
+
+  # Hilos virtuales para atender peticiones: una llamada lenta al proveedor no acapara un hilo
+  # del sistema.
+  threads:
+    virtual:
+      enabled: true
+
+  # El JSON entra y sale en snake_case: total_centavos, creado_en. Se decide aquí, una sola vez.
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+  # La base del ejemplo: H2, en memoria. Nace vacía al arrancar y se borra al apagar.
+  datasource:
+    url: jdbc:h2:mem:pedidos
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    # La conexión a la base se suelta al terminar el servicio, no al terminar la respuesta.
+    open-in-view: false
+
+  # El tiempo límite de toda llamada HTTP hacia afuera: 1 s para conectar, 2 s para leer.
+  http:
+    clients:
+      connect-timeout: ${HTTP_CONNECT_TIMEOUT:1s}
+      read-timeout: ${HTTP_READ_TIMEOUT:2s}
+      imperative:
+        factory: jdk
+
+server:
+  port: ${PORT:8080}
+  # Al apagar, termina primero las peticiones que ya entraron.
+  shutdown: graceful
+
+# Salud: /actuator/health. No se publica ningún otro punto de Actuator.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+# Lo propio de esta aplicación.
+pedidos:
+  inventario:
+    url: ${INVENTARIO_URL:http://localhost:9090}
+    reintentos: 2
+    espera: 200ms
+
+# Cada línea de la bitácora lleva el número de la petición.
+logging:
+  pattern:
+    level: "%5p [%X{request_id:-}]"
